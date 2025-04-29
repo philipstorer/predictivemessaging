@@ -111,7 +111,7 @@ Perform:
 - THEN suggest an improved version.
 
 Constraints for the Improved Version:
-- Preserve all explicit factual claims and value propositions exactly. This is a non-negotiable. Check it to make sure this is preserved. 
+- Preserve all explicit factual claims and value propositions exactly.
 - Maintain the original communication intent and fundamental ideas.
 - Improve emotional resonance, tone, flow, and overall readability.
 - Allow moderate rewording and restructuring if needed for clarity and engagement.
