@@ -25,7 +25,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Predictive Message Testing Dashboard")
+st.title("Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
 with st.form("message_form"):
@@ -53,12 +53,10 @@ def extract_json_block(response_text, label):
     try:
         match = re.search(rf"{label}:\s*(\{{.*?\}})", response_text, re.DOTALL)
         if match:
-            json_obj = json.loads(match.group(1))
-            return json_obj
+            return json.loads(match.group(1))
         else:
             return None
-    except Exception as e:
-        print(f"Error parsing {label}: {e}")
+    except Exception:
         return None
 
 def extract_improved_message(response_text):
@@ -66,10 +64,13 @@ def extract_improved_message(response_text):
         match = re.search(r'Improved_Message:\s*"(.*?)"', response_text, re.DOTALL)
         if match:
             return match.group(1).strip()
-        else:
-            return None
-    except Exception as e:
-        print(f"Error extracting improved message: {e}")
+        match = re.search(r'Improved_Message:\s*(.*)', response_text, re.DOTALL)
+        if match:
+            extracted = match.group(1).strip()
+            extracted = extracted.split('Scores_JSON:')[0].strip()
+            return extracted
+        return None
+    except Exception:
         return None
 
 if submit_button and original_message:
@@ -107,14 +108,16 @@ Perform:
 - Suggested Improved Version
 
 Constraints for the Improved Version:
-- Make only light, subtle improvements.
-- Maintain the original idea, purpose, and meaning as closely as possible.
-- Keep within ±15% of the original character count ({original_length} characters).
-- Focus on improving tone, clarity, slight emotional enhancement, and overall readability without major rewrites.
+- Light, subtle improvements.
+- Maintain same fundamental ideas and meaning.
+- Stay within ±15% of the original character count ({original_length} characters).
 
-Output clearly at the end:
-- Improved_Message: "(your improved message here)"
-- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Clearly output:
+Improved_Message: 
+(Write the improved message here)
+
+Scores_JSON: 
+{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
         original_response = call_gpt(system_prompt_original)
 
@@ -133,22 +136,25 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
+- 9 Domain Table
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
-Output clearly at the end:
-- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Clearly output:
+Scores_JSON: 
+{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
             improved_response = call_gpt(system_prompt_improved)
             improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
     st.header("Original Message Evaluation")
-    st.markdown(original_response.split("Scores_JSON:")[0])
+    if original_response:
+        st.markdown(original_response.split("Scores_JSON:")[0])
 
     if improved_message:
         st.header("Improved Message Evaluation")
-        st.markdown(improved_response.split("Scores_JSON:")[0])
+        if improved_response:
+            st.markdown(improved_response.split("Scores_JSON:")[0])
 
         if original_scores and improved_scores:
             comparison_df = pd.DataFrame({
