@@ -54,7 +54,7 @@ def call_gpt(prompt):
 
 def extract_scores(response_text):
     try:
-        json_text = re.search(r'\\{.*\\}', response_text, re.DOTALL).group()
+        json_text = re.search(r'\{.*\}', response_text, re.DOTALL).group()
         scores = json.loads(json_text)
         return scores
     except Exception as e:
@@ -63,7 +63,7 @@ def extract_scores(response_text):
 
 def extract_improved_message(response_text):
     try:
-        match = re.search(r'Suggested Improved Version:\\n>\\s*\"(.*?)\"', response_text, re.DOTALL)
+        match = re.search(r'Improved_Message:\s*"(.*?)"', response_text, re.DOTALL)
         if match:
             return match.group(1).strip()
         else:
@@ -74,22 +74,25 @@ def extract_improved_message(response_text):
 
 # --- Generate Output ---
 if submit_button and original_message:
-    with st.spinner('Analyzing cognitive and linguistic dimensions...'):
-        checks = [
-            \"Evaluating Relational Anchoring...\",
-            \"Assessing Emotional Reality Validation...\",
-            \"Reviewing Narrative Integration...\",
-            \"Measuring Collaborative Agency Framing...\",
-            \"Checking Value-Embedded Motivation...\",
-            \"Analyzing Cognitive Effort Reduction...\",
-            \"Assessing Temporal Emotional Framing...\",
-            \"Evaluating Empathic Leadership Positioning...\",
-            \"Reviewing Affective Modality Matching...\"
-        ]
-        for check in checks:
-            st.info(check)
-            time.sleep(1.5)
-        system_prompt_original = f\"\"\"
+    spinner_messages = [
+        "Evaluating Relational Anchoring...",
+        "Assessing Emotional Reality Validation...",
+        "Reviewing Narrative Integration...",
+        "Measuring Collaborative Agency Framing...",
+        "Checking Value-Embedded Motivation...",
+        "Analyzing Cognitive Effort Reduction...",
+        "Assessing Temporal Emotional Framing...",
+        "Evaluating Empathic Leadership Positioning...",
+        "Reviewing Affective Modality Matching..."
+    ]
+
+    with st.spinner('Starting cognitive-linguistic analysis...'):
+        for message in spinner_messages:
+            with st.empty():
+                st.info(message)
+                time.sleep(1.5)
+
+        system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
@@ -102,22 +105,17 @@ Perform:
 - Suggested Improved Version
 
 Also, output ONLY the improved message separately at the end clearly like this:
-Improved_Message: \"(Your improved message here)\"
+Improved_Message: "(Your improved message here)"
 
 Also, output the 9 domain scores clearly in JSON format at the end like this:
-Scores_JSON: {\"Relational Anchoring\": 8, \"Emotional Reality Validation\": 7, \"Narrative Integration\": 6, \"Collaborative Agency Framing\": 9, \"Value-Embedded Motivation\": 8, \"Cognitive Effort Reduction\": 9, \"Temporal Emotional Framing\": 7, \"Empathic Leadership Positioning\": 8, \"Affective Modality Matching\": 7}
-\"\"\"
+Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+"""
         original_response = call_gpt(system_prompt_original)
 
-        improved_message = None
-        try:
-            improved_message_match = re.search(r'Improved_Message:\\s*\"(.*?)\"', original_response, re.DOTALL)
-            if improved_message_match:
-                improved_message = improved_message_match.group(1).strip()
-        except Exception as e:
-            print(f\"Error extracting improved message: {e}\")
+        improved_message = extract_improved_message(original_response)
 
-        system_prompt_improved = f\"\"\"
+        if improved_message:
+            system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
@@ -129,51 +127,50 @@ Perform:
 - Strategic Executive Summary
 
 Also, output the 9 domain scores clearly in JSON format at the end like this:
-Scores_JSON: {\"Relational Anchoring\": 8, \"Emotional Reality Validation\": 7, \"Narrative Integration\": 6, \"Collaborative Agency Framing\": 9, \"Value-Embedded Motivation\": 8, \"Cognitive Effort Reduction\": 9, \"Temporal Emotional Framing\": 7, \"Empathic Leadership Positioning\": 8, \"Affective Modality Matching\": 7}
-\"\"\"
-        improved_response = call_gpt(system_prompt_improved)
+Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+"""
+            improved_response = call_gpt(system_prompt_improved)
 
-        st.header(\"Original Message Evaluation\")
-        st.write(original_response)
+            st.header("Original Message Evaluation")
+            st.write(original_response)
 
-        st.header(\"Improved Message Evaluation\")
-        if improved_message:
+            st.header("Improved Message Evaluation")
             st.write(improved_response)
-        else:
-            st.error(\"No improved message could be extracted. Please refine input.\")
 
-        try:
-            original_scores_json = re.search(r'Scores_JSON:\\s*(\\{.*?\\})', original_response, re.DOTALL)
-            improved_scores_json = re.search(r'Scores_JSON:\\s*(\\{.*?\\})', improved_response, re.DOTALL)
-            if original_scores_json and improved_scores_json:
-                original_scores = json.loads(original_scores_json.group(1))
-                improved_scores = json.loads(improved_scores_json.group(1))
+            try:
+                original_scores_json = re.search(r'Scores_JSON:\s*(\{.*?\})', original_response, re.DOTALL)
+                improved_scores_json = re.search(r'Scores_JSON:\s*(\{.*?\})', improved_response, re.DOTALL)
 
-                comparison_df = pd.DataFrame({
-                    \"Domain\": original_scores.keys(),
-                    \"Original Score\": original_scores.values(),
-                    \"Improved Score\": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
-                })
+                if original_scores_json and improved_scores_json:
+                    original_scores = json.loads(original_scores_json.group(1))
+                    improved_scores = json.loads(improved_scores_json.group(1))
 
-                st.subheader(\"Comparison of Domain Scores\")
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    y=comparison_df[\"Domain\"],
-                    x=comparison_df[\"Original Score\"],
-                    name='Original Score',
-                    orientation='h'
-                ))
-                fig.add_trace(go.Bar(
-                    y=comparison_df[\"Domain\"],
-                    x=comparison_df[\"Improved Score\"],
-                    name='Improved Score',
-                    orientation='h'
-                ))
-                fig.update_layout(barmode='group', height=600)
-                st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.error(f\"Could not parse detailed scores for visualization: {str(e)}\")
+                    comparison_df = pd.DataFrame({
+                        "Domain": original_scores.keys(),
+                        "Original Score": original_scores.values(),
+                        "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
+                    })
 
-        if improved_message:
-            st.subheader(\"Final Improved Message\")
+                    st.subheader("Comparison of Domain Scores")
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        y=comparison_df["Domain"],
+                        x=comparison_df["Original Score"],
+                        name='Original Score',
+                        orientation='h'
+                    ))
+                    fig.add_trace(go.Bar(
+                        y=comparison_df["Domain"],
+                        x=comparison_df["Improved Score"],
+                        name='Improved Score',
+                        orientation='h'
+                    ))
+                    fig.update_layout(barmode='group', height=600)
+                    st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Could not parse detailed scores for visualization: {str(e)}")
+
+            st.subheader("Final Improved Message")
             st.success(improved_message)
+        else:
+            st.error("No improved message could be extracted. Please refine input.")
