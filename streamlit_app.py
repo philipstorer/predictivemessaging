@@ -22,15 +22,10 @@ st.markdown("""
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
-.section-title {
-    font-size:22px;
-    font-weight:bold;
-    margin-top:20px;
-}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Predictive Message Testing Dashboard")
+st.title("🎯 Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
 with st.form("message_form"):
@@ -94,9 +89,7 @@ if submit_button and original_message:
         for message in spinner_messages:
             with st.empty():
                 st.info(message)
-                time.sleep(1.2)
-
-        original_length = len(original_message)
+                time.sleep(1.5)
 
         system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
@@ -110,14 +103,10 @@ Perform:
 - Strategic Executive Summary
 - Suggested Improved Version
 
-Constraints:
-- The suggested Improved Message must stay within ±15% of the original character count ({original_length} characters).
-
-Output formatting:
-- At the end of your response, output ONLY the improved message separately, clearly labeled like this:
+Also, output ONLY the improved message separately at the end clearly like this:
 Improved_Message: "(Your improved message here)"
 
-- Also at the end, output the 9 domain scores clearly in JSON format like this:
+Also, output the 9 domain scores clearly in JSON format at the end like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
         original_response = call_gpt(system_prompt_original)
@@ -140,52 +129,44 @@ Perform:
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
-Output formatting:
-- At the end of your response, output the 9 domain scores clearly in JSON format like this:
+Also, output the 9 domain scores clearly in JSON format at the end like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
             improved_response = call_gpt(system_prompt_improved)
             improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
-    st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
+    st.header("Original Message Evaluation")
     st.markdown(original_response.split("Scores_JSON:")[0])
 
     if improved_message:
-        st.markdown('<div class="section-title">Improved Message Evaluation</div>', unsafe_allow_html=True)
+        st.header("Improved Message Evaluation")
         st.markdown(improved_response.split("Scores_JSON:")[0])
 
         if original_scores and improved_scores:
-            st.markdown('<div class="section-title">Comparison of Domain Scores</div>', unsafe_allow_html=True)
-            col1, col2 = st.columns([1, 2])
+            comparison_df = pd.DataFrame({
+                "Domain": original_scores.keys(),
+                "Original Score": original_scores.values(),
+                "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
+            })
 
-            with col2:
-                comparison_df = pd.DataFrame({
-                    "Domain": original_scores.keys(),
-                    "Original Score": original_scores.values(),
-                    "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
-                })
+            st.subheader("Comparison of Domain Scores")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Original Score"],
+                name='Original Score',
+                orientation='h'
+            ))
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Improved Score"],
+                name='Improved Score',
+                orientation='h'
+            ))
+            fig.update_layout(barmode='group', height=600)
+            st.plotly_chart(fig, use_container_width=True)
 
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    y=comparison_df["Domain"],
-                    x=comparison_df["Original Score"],
-                    name='Original Score',
-                    orientation='h'
-                ))
-                fig.add_trace(go.Bar(
-                    y=comparison_df["Domain"],
-                    x=comparison_df["Improved Score"],
-                    name='Improved Score',
-                    orientation='h'
-                ))
-                fig.update_layout(barmode='group', height=600)
-                st.plotly_chart(fig, use_container_width=True)
-
-            with col1:
-                st.metric(label="Aggregate Score (Original)", value=f"{sum(original_scores.values())/9:.1f}/10")
-                st.metric(label="Aggregate Score (Improved)", value=f"{sum(improved_scores.values())/9:.1f}/10")
-
-        st.markdown('<div class="section-title">Final Improved Message</div>', unsafe_allow_html=True)
+        st.subheader("Final Improved Message")
         st.success(improved_message)
     else:
         st.error("No improved message could be extracted. Please refine input.")
