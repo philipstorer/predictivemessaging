@@ -42,13 +42,17 @@ with st.form("message_form"):
 
 # --- Functions ---
 def call_gpt(prompt):
-    response = openai.ChatCompletion.create(
-        model="gpt-4o",
-        messages=[{"role": "system", "content": prompt}],
-        temperature=0.3,
-        max_tokens=3500
-    )
-    return response['choices'][0]['message']['content']
+   client = openai.OpenAI()
+
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "system", "content": system_prompt}],
+    temperature=0.3,
+    max_tokens=3500
+)
+
+output = response.choices[0].message.content
+
 
 def extract_scores(response_text):
     lines = response_text.splitlines()
