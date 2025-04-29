@@ -6,7 +6,6 @@ import json
 import re
 import time
 
-# Initialize OpenAI client
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(page_title="Predictive Message Testing Dashboard", layout="wide")
@@ -29,7 +28,6 @@ st.markdown("""
 st.title("🎯 Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
-# --- Form Inputs ---
 with st.form("message_form"):
     st.header("Message Input")
     original_message = st.text_area("Enter Original Message:", height=200)
@@ -42,7 +40,6 @@ with st.form("message_form"):
     tone = st.selectbox("Desired Tone:", ["Empathetic", "Clinical", "Inspirational", "Direct"], index=0)
     submit_button = st.form_submit_button("Analyze Message")
 
-# --- Functions ---
 def call_gpt(prompt):
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -52,14 +49,17 @@ def call_gpt(prompt):
     )
     return response.choices[0].message.content
 
-def extract_scores(response_text):
+def extract_json_block(response_text, label):
     try:
-        json_text = re.search(r'\{.*\}', response_text, re.DOTALL).group()
-        scores = json.loads(json_text)
-        return scores
+        match = re.search(rf"{label}:\s*(\{{.*?\}})", response_text, re.DOTALL)
+        if match:
+            json_obj = json.loads(match.group(1))
+            return json_obj
+        else:
+            return None
     except Exception as e:
-        print(f"Error parsing scores: {e}")
-        return {}
+        print(f"Error parsing {label}: {e}")
+        return None
 
 def extract_improved_message(response_text):
     try:
@@ -72,7 +72,6 @@ def extract_improved_message(response_text):
         print(f"Error extracting improved message: {e}")
         return None
 
-# --- Generate Output ---
 if submit_button and original_message:
     spinner_messages = [
         "Evaluating Relational Anchoring...",
@@ -113,6 +112,10 @@ Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Na
         original_response = call_gpt(system_prompt_original)
 
         improved_message = extract_improved_message(original_response)
+        original_scores = extract_json_block(original_response, "Scores_JSON")
+
+        improved_response = ""
+        improved_scores = {}
 
         if improved_message:
             system_prompt_improved = f"""
@@ -130,47 +133,40 @@ Also, output the 9 domain scores clearly in JSON format at the end like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
             improved_response = call_gpt(system_prompt_improved)
+            improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
-            st.header("Original Message Evaluation")
-            st.write(original_response)
+    st.header("Original Message Evaluation")
+    st.markdown(original_response.split("Scores_JSON:")[0])
 
-            st.header("Improved Message Evaluation")
-            st.write(improved_response)
+    if improved_message:
+        st.header("Improved Message Evaluation")
+        st.markdown(improved_response.split("Scores_JSON:")[0])
 
-            try:
-                original_scores_json = re.search(r'Scores_JSON:\s*(\{.*?\})', original_response, re.DOTALL)
-                improved_scores_json = re.search(r'Scores_JSON:\s*(\{.*?\})', improved_response, re.DOTALL)
+        if original_scores and improved_scores:
+            comparison_df = pd.DataFrame({
+                "Domain": original_scores.keys(),
+                "Original Score": original_scores.values(),
+                "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
+            })
 
-                if original_scores_json and improved_scores_json:
-                    original_scores = json.loads(original_scores_json.group(1))
-                    improved_scores = json.loads(improved_scores_json.group(1))
+            st.subheader("Comparison of Domain Scores")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Original Score"],
+                name='Original Score',
+                orientation='h'
+            ))
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Improved Score"],
+                name='Improved Score',
+                orientation='h'
+            ))
+            fig.update_layout(barmode='group', height=600)
+            st.plotly_chart(fig, use_container_width=True)
 
-                    comparison_df = pd.DataFrame({
-                        "Domain": original_scores.keys(),
-                        "Original Score": original_scores.values(),
-                        "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
-                    })
-
-                    st.subheader("Comparison of Domain Scores")
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        y=comparison_df["Domain"],
-                        x=comparison_df["Original Score"],
-                        name='Original Score',
-                        orientation='h'
-                    ))
-                    fig.add_trace(go.Bar(
-                        y=comparison_df["Domain"],
-                        x=comparison_df["Improved Score"],
-                        name='Improved Score',
-                        orientation='h'
-                    ))
-                    fig.update_layout(barmode='group', height=600)
-                    st.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
-                st.error(f"Could not parse detailed scores for visualization: {str(e)}")
-
-            st.subheader("Final Improved Message")
-            st.success(improved_message)
-        else:
-            st.error("No improved message could be extracted. Please refine input.")
+        st.subheader("Final Improved Message")
+        st.success(improved_message)
+    else:
+        st.error("No improved message could be extracted. Please refine input.")
