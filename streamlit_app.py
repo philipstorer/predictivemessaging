@@ -5,14 +5,12 @@ import plotly.graph_objects as go
 import json
 import re
 import time
+import threading
 
-# Initialize OpenAI client
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Configure Streamlit page
 st.set_page_config(page_title="Predictive Message Testing Dashboard", layout="wide")
 
-# CSS styling
 st.markdown("""
 <style>
 .section-title {
@@ -75,11 +73,8 @@ def extract_improved_message(response_text):
     except Exception:
         return None
 
-if submit_button and original_message:
-    spinner = st.empty()
-    animation = st.empty()
-
-    spinner_messages = [
+def animate_thinking(stop_event):
+    messages = [
         "Evaluating Relational Anchoring...",
         "Assessing Emotional Reality Validation...",
         "Reviewing Narrative Integration...",
@@ -90,26 +85,20 @@ if submit_button and original_message:
         "Evaluating Empathic Leadership Positioning...",
         "Reviewing Affective Modality Matching..."
     ]
+    idx = 0
+    while not stop_event.is_set():
+        thinking_placeholder.info(messages[idx % len(messages)])
+        idx += 1
+        time.sleep(1.2)
 
-    with spinner.container():
-        with st.spinner('Starting cognitive-linguistic analysis...'):
-            animation_message_idx = 0
-            start_time = time.time()
-            loading = True
+if submit_button and original_message:
+    stop_event = threading.Event()
+    thinking_thread = threading.Thread(target=animate_thinking, args=(stop_event,))
+    thinking_thread.start()
 
-            while loading:
-                animation.info(spinner_messages[animation_message_idx % len(spinner_messages)])
-                animation_message_idx += 1
-                time.sleep(1.2)
+    original_length = len(original_message)
 
-                if "analysis_complete" in st.session_state:
-                    loading = False
-
-    if "analysis_complete" not in st.session_state:
-        original_length = len(original_message)
-
-        # System prompt for original message
-        system_prompt_original = f"""
+    system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -131,16 +120,16 @@ Output:
 - Improved_Message: "(your improved message here)"
 - Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-        original_response = call_gpt(system_prompt_original)
+    original_response = call_gpt(system_prompt_original)
 
-        improved_message = extract_improved_message(original_response)
-        original_scores = extract_json_block(original_response, "Scores_JSON")
+    improved_message = extract_improved_message(original_response)
+    original_scores = extract_json_block(original_response, "Scores_JSON")
 
-        improved_response = ""
-        improved_scores = {}
+    improved_response = ""
+    improved_scores = {}
 
-        if improved_message:
-            system_prompt_improved = f"""
+    if improved_message:
+        system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -155,63 +144,53 @@ Perform:
 Output:
 - Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-            improved_response = call_gpt(system_prompt_improved)
-            improved_scores = extract_json_block(improved_response, "Scores_JSON")
+        improved_response = call_gpt(system_prompt_improved)
+        improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
-        st.session_state["analysis_complete"] = {
-            "original_response": original_response,
-            "improved_message": improved_message,
-            "improved_response": improved_response,
-            "original_scores": original_scores,
-            "improved_scores": improved_scores
-        }
+    stop_event.set()
+    thinking_thread.join()
+    thinking_placeholder.empty()
 
-    spinner.empty()
-    animation.empty()
+    st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
+    if original_response:
+        st.markdown(original_response.split("Scores_JSON:")[0])
 
-    data = st.session_state.get("analysis_complete", None)
+    if improved_message:
+        st.markdown('<div class="section-title">Improved Message Evaluation</div>', unsafe_allow_html=True)
+        if improved_response:
+            st.markdown(improved_response.split("Scores_JSON:")[0])
 
-    if data:
-        st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
-        if data["original_response"]:
-            st.markdown(data["original_response"].split("Scores_JSON:")[0])
+        if original_scores and improved_scores:
+            st.markdown('<div class="section-title">Comparison of Domain Scores</div>', unsafe_allow_html=True)
+            col1, col2 = st.columns([1, 2])
 
-        if data["improved_message"]:
-            st.markdown('<div class="section-title">Improved Message Evaluation</div>', unsafe_allow_html=True)
-            if data["improved_response"]:
-                st.markdown(data["improved_response"].split("Scores_JSON:")[0])
+            with col2:
+                comparison_df = pd.DataFrame({
+                    "Domain": original_scores.keys(),
+                    "Original Score": original_scores.values(),
+                    "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
+                })
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    y=comparison_df["Domain"],
+                    x=comparison_df["Original Score"],
+                    name='Original Score',
+                    orientation='h'
+                ))
+                fig.add_trace(go.Bar(
+                    y=comparison_df["Domain"],
+                    x=comparison_df["Improved Score"],
+                    name='Improved Score',
+                    orientation='h'
+                ))
+                fig.update_layout(barmode='group', height=600)
+                st.plotly_chart(fig, use_container_width=True)
 
-            if data["original_scores"] and data["improved_scores"]:
-                st.markdown('<div class="section-title">Comparison of Domain Scores</div>', unsafe_allow_html=True)
-                col1, col2 = st.columns([1, 2])
+            with col1:
+                st.metric(label="Aggregate Score (Original)", value=f"{sum(original_scores.values())/9:.1f}/10")
+                st.metric(label="Aggregate Score (Improved)", value=f"{sum(improved_scores.values())/9:.1f}/10")
 
-                with col2:
-                    comparison_df = pd.DataFrame({
-                        "Domain": data["original_scores"].keys(),
-                        "Original Score": data["original_scores"].values(),
-                        "Improved Score": [data["improved_scores"].get(domain, 0) for domain in data["original_scores"].keys()]
-                    })
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        y=comparison_df["Domain"],
-                        x=comparison_df["Original Score"],
-                        name='Original Score',
-                        orientation='h'
-                    ))
-                    fig.add_trace(go.Bar(
-                        y=comparison_df["Domain"],
-                        x=comparison_df["Improved Score"],
-                        name='Improved Score',
-                        orientation='h'
-                    ))
-                    fig.update_layout(barmode='group', height=600)
-                    st.plotly_chart(fig, use_container_width=True)
-
-                with col1:
-                    st.metric(label="Aggregate Score (Original)", value=f"{sum(data['original_scores'].values())/9:.1f}/10")
-                    st.metric(label="Aggregate Score (Improved)", value=f"{sum(data['improved_scores'].values())/9:.1f}/10")
-
-            st.markdown('<div class="section-title">Final Improved Message</div>', unsafe_allow_html=True)
-            st.success(data["improved_message"])
-        else:
-            st.error("No improved message could be extracted. Please refine input.")
+        st.markdown('<div class="section-title">Final Improved Message</div>', unsafe_allow_html=True)
+        st.success(improved_message)
+    else:
+        st.error("No improved message could be extracted. Please refine input.")
