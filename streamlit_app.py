@@ -33,6 +33,9 @@ st.markdown("""
 st.title("Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
+spinner_placeholder = st.empty()
+thinking_placeholder = st.empty()
+
 with st.form("message_form"):
     st.header("Message Input")
     original_message = st.text_area("Enter Original Message:", height=200)
@@ -72,12 +75,19 @@ def extract_improved_message(response_text):
         if match:
             return match.group(1).strip()
         else:
-            return None
+            match = re.search(r'Improved_Message:\s*(.*)', response_text)
+            if match:
+                return match.group(1).strip()
+            else:
+                return None
     except Exception as e:
         print(f"Error extracting improved message: {e}")
         return None
 
 if submit_button and original_message:
+    spinner_placeholder.spinner('Starting cognitive-linguistic analysis...')
+    thinking_placeholder.empty()
+
     spinner_messages = [
         "Evaluating Relational Anchoring...",
         "Assessing Emotional Reality Validation...",
@@ -90,15 +100,14 @@ if submit_button and original_message:
         "Reviewing Affective Modality Matching..."
     ]
 
-    with st.spinner('Starting cognitive-linguistic analysis...'):
-        for message in spinner_messages:
-            with st.empty():
-                st.info(message)
-                time.sleep(1.2)
+    for message in spinner_messages:
+        thinking_placeholder.info(message)
+        time.sleep(1.2)
+        thinking_placeholder.empty()
 
-        original_length = len(original_message)
+    original_length = len(original_message)
 
-        system_prompt_original = f"""
+    system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -123,16 +132,16 @@ Improved_Message: "(Your improved message here)"
 - Then output the 9 domain scores clearly in JSON format like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-        original_response = call_gpt(system_prompt_original)
+    original_response = call_gpt(system_prompt_original)
 
-        improved_message = extract_improved_message(original_response)
-        original_scores = extract_json_block(original_response, "Scores_JSON")
+    improved_message = extract_improved_message(original_response)
+    original_scores = extract_json_block(original_response, "Scores_JSON")
 
-        improved_response = ""
-        improved_scores = {}
+    improved_response = ""
+    improved_scores = {}
 
-        if improved_message:
-            system_prompt_improved = f"""
+    if improved_message:
+        system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -148,8 +157,11 @@ Output formatting:
 - After the evaluation, output the 9 domain scores clearly in JSON format like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-            improved_response = call_gpt(system_prompt_improved)
-            improved_scores = extract_json_block(improved_response, "Scores_JSON")
+        improved_response = call_gpt(system_prompt_improved)
+        improved_scores = extract_json_block(improved_response, "Scores_JSON")
+
+    spinner_placeholder.empty()
+    thinking_placeholder.empty()
 
     st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
     st.markdown(original_response.split("Scores_JSON:")[0])
