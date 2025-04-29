@@ -111,6 +111,8 @@ Constraints for the Improved Version:
 - Light, subtle improvements.
 - Maintain same fundamental ideas and meaning.
 - Stay within ±15% of the original character count ({original_length} characters).
+- Critically important: Any explicit claims, product benefits, or factual value propositions (such as "flexible dosing", "quick onset of action") MUST be preserved clearly and remain prominent in the improved message. These must not be deleted, weakened, hidden, or heavily reworded.
+- Focus changes on tone, readability, emotional connection, and flow — without altering key factual content.
 
 Clearly output:
 Improved_Message: 
