@@ -25,7 +25,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Predictive Message Testing Dashboard")
+st.title("🎯 Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
 with st.form("message_form"):
@@ -64,12 +64,12 @@ def extract_improved_message(response_text):
         match = re.search(r'Improved_Message:\s*"(.*?)"', response_text, re.DOTALL)
         if match:
             return match.group(1).strip()
-        match = re.search(r'Improved_Message:\s*(.*)', response_text, re.DOTALL)
-        if match:
-            extracted = match.group(1).strip()
-            extracted = extracted.split('Scores_JSON:')[0].strip()
-            return extracted
-        return None
+        else:
+            match = re.search(r'Improved_Message:\s*(.*?)\s*Scores_JSON:', response_text, re.DOTALL)
+            if match:
+                return match.group(1).strip()
+            else:
+                return None
     except Exception:
         return None
 
@@ -105,21 +105,20 @@ Perform:
 - 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
-- Suggested Improved Version
+- THEN suggest an improved version.
 
 Constraints for the Improved Version:
-- Light, subtle improvements.
-- Maintain same fundamental ideas and meaning.
+- Preserve all explicit factual claims and value propositions exactly.
+- Maintain the original communication intent and fundamental ideas.
+- Improve emotional resonance, tone, flow, and overall readability.
+- Allow moderate rewording and restructuring if needed for clarity and engagement.
 - Stay within ±15% of the original character count ({original_length} characters).
-- Critically important: Any explicit claims, product benefits, or factual value propositions (such as "flexible dosing", "quick onset of action") MUST be preserved clearly and remain prominent in the improved message. These must not be deleted, weakened, hidden, or heavily reworded.
-- Focus changes on tone, readability, emotional connection, and flow — without altering key factual content.
 
-Clearly output:
-Improved_Message: 
-(Write the improved message here)
+At the end, clearly output:
+Improved_Message: (the improved message)
 
-Scores_JSON: 
-{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Also output:
+Scores_JSON: (the 9 domain scores in JSON format)
 """
         original_response = call_gpt(system_prompt_original)
 
@@ -142,19 +141,20 @@ Perform:
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
-Clearly output:
-Scores_JSON: 
-{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+At the end, clearly output:
+Scores_JSON: (the 9 domain scores in JSON format)
 """
             improved_response = call_gpt(system_prompt_improved)
             improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
     st.header("Original Message Evaluation")
     if original_response:
-        st.markdown(original_response.split("Scores_JSON:")[0])
+        st.markdown(original_response.split("Improved_Message:")[0])
 
     if improved_message:
         st.header("Improved Message Evaluation")
+        st.success(improved_message)
+
         if improved_response:
             st.markdown(improved_response.split("Scores_JSON:")[0])
 
@@ -181,8 +181,5 @@ Scores_JSON:
             ))
             fig.update_layout(barmode='group', height=600)
             st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Final Improved Message")
-        st.success(improved_message)
     else:
         st.error("No improved message could be extracted. Please refine input.")
