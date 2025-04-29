@@ -2,6 +2,8 @@ import streamlit as st
 import openai
 import pandas as pd
 import plotly.graph_objects as go
+import json
+import re
 
 # Initialize OpenAI client
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -50,30 +52,17 @@ def call_gpt(prompt):
     return response.choices[0].message.content
 
 def extract_scores(response_text):
-    lines = response_text.splitlines()
-    scores = {}
-    capture = False
-    for line in lines:
-        if "Domain" in line and "Score" in line:
-            capture = True
-            continue
-        if capture:
-            if line.strip() == "---":
-                break
-            parts = line.split("|")
-            if len(parts) > 2:
-                domain = parts[1].strip()
-                try:
-                    score = float(parts[2].strip())
-                    scores[domain] = score
-                except:
-                    pass
-    return scores
+    try:
+        json_text = re.search(r'\\{.*\\}', response_text, re.DOTALL).group()
+        scores = json.loads(json_text)
+        return scores
+    except Exception as e:
+        print(f"Error parsing scores: {e}")
+        return {}
 
 # --- Generate Output ---
 if submit_button and original_message:
     with st.spinner('Analyzing your message with deep cognitive-linguistic evaluation...'):
-        # Prompt for Original Message
         system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -81,23 +70,24 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, etc)
+- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 - Suggested Improved Version
+
+Also, output the 9 domain scores at the end in JSON format like this:
+{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 
 ORIGINAL MESSAGE:
 {original_message}
 """
         original_response = call_gpt(system_prompt_original)
 
-        # Extract Improved Version
         try:
             improved_message = original_response.split("Suggested Improved Version:")[1].strip().split("\n")[0].replace('> ', '').replace('"', '')
         except:
             improved_message = "(Could not extract improved version.)"
 
-        # Prompt for Improved Message Analysis
         system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -105,23 +95,24 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, etc)
+- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
+
+Also, output the 9 domain scores at the end in JSON format like this:
+{{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 
 IMPROVED MESSAGE:
 {improved_message}
 """
         improved_response = call_gpt(system_prompt_improved)
 
-        # Display
         st.header("Original Message Evaluation")
         st.write(original_response)
 
         st.header("Improved Message Evaluation")
         st.write(improved_response)
 
-        # --- Parse and Visualize ---
         try:
             original_scores = extract_scores(original_response)
             improved_scores = extract_scores(improved_response)
@@ -151,6 +142,5 @@ IMPROVED MESSAGE:
         except Exception as e:
             st.error(f"Could not parse detailed scores for visualization: {str(e)}")
 
-        # Show Improved Message
         st.subheader("Final Improved Message")
         st.success(improved_message)
