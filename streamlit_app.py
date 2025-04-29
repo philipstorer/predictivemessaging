@@ -100,6 +100,7 @@ if submit_button and original_message:
 
         system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
+
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
 Tone: {tone}
@@ -110,14 +111,16 @@ Perform:
 - Strategic Executive Summary
 - Suggested Improved Version
 
-Constraints:
-- The suggested Improved Message must stay within ±15% of the original character count ({original_length} characters).
+Constraints for the Improved Version:
+- It must maintain the same fundamental idea, purpose, and meaning as the original message.
+- It must stay within ±15% of the original character count ({original_length} characters).
+- It should improve tone, readability, emotional resonance, and strategic impact, without altering the core communication intent.
 
 Output formatting:
-- At the end of your response, output ONLY the improved message separately, clearly labeled like this:
+- After the evaluation, output ONLY the improved message separately, clearly labeled like this:
 Improved_Message: "(Your improved message here)"
 
-- Also at the end, output the 9 domain scores clearly in JSON format like this:
+- Then output the 9 domain scores clearly in JSON format like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
         original_response = call_gpt(system_prompt_original)
@@ -131,6 +134,7 @@ Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Na
         if improved_message:
             system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
+
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
 Tone: {tone}
@@ -141,7 +145,7 @@ Perform:
 - Strategic Executive Summary
 
 Output formatting:
-- At the end of your response, output the 9 domain scores clearly in JSON format like this:
+- After the evaluation, output the 9 domain scores clearly in JSON format like this:
 Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
             improved_response = call_gpt(system_prompt_improved)
