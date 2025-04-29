@@ -33,9 +33,6 @@ st.markdown("""
 st.title("Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
-spinner_placeholder = st.empty()
-thinking_placeholder = st.empty()
-
 with st.form("message_form"):
     st.header("Message Input")
     original_message = st.text_area("Enter Original Message:", height=200)
@@ -47,6 +44,9 @@ with st.form("message_form"):
     ])
     tone = st.selectbox("Desired Tone:", ["Empathetic", "Clinical", "Inspirational", "Direct"], index=0)
     submit_button = st.form_submit_button("Analyze Message")
+
+spinner_placeholder = st.empty()
+thinking_placeholder = st.empty()
 
 def call_gpt(prompt):
     response = client.chat.completions.create(
@@ -85,8 +85,8 @@ def extract_improved_message(response_text):
         return None
 
 if submit_button and original_message:
-    spinner_placeholder.spinner('Starting cognitive-linguistic analysis...')
-    thinking_placeholder.empty()
+    with spinner_placeholder.container():
+        st.spinner('Starting cognitive-linguistic analysis...')
 
     spinner_messages = [
         "Evaluating Relational Anchoring...",
