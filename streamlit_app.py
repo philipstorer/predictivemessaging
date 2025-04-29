@@ -1,11 +1,10 @@
-
 import streamlit as st
 import openai
 import pandas as pd
 import plotly.graph_objects as go
 
-# Set your OpenAI API key here
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Initialize OpenAI client
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(page_title="Predictive Message Testing Dashboard", layout="wide")
 
@@ -42,17 +41,13 @@ with st.form("message_form"):
 
 # --- Functions ---
 def call_gpt(prompt):
-   client = openai.OpenAI()
-
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[{"role": "system", "content": system_prompt}],
-    temperature=0.3,
-    max_tokens=3500
-)
-
-output = response.choices[0].message.content
-
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": prompt}],
+        temperature=0.3,
+        max_tokens=3500
+    )
+    return response.choices[0].message.content
 
 def extract_scores(response_text):
     lines = response_text.splitlines()
@@ -119,53 +114,43 @@ IMPROVED MESSAGE:
 """
         improved_response = call_gpt(system_prompt_improved)
 
-        # Layout starts here
-        col1, col2 = st.columns(2)
+        # Display
+        st.header("Original Message Evaluation")
+        st.write(original_response)
 
-        with col1:
-            st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.subheader("Original Message Evaluation")
+        st.header("Improved Message Evaluation")
+        st.write(improved_response)
+
+        # --- Parse and Visualize ---
+        try:
             original_scores = extract_scores(original_response)
-            original_avg = sum(original_scores.values()) / len(original_scores)
-            st.metric("Original Aggregate Score", f"{original_avg:.1f}/10")
-            st.write(original_response)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.subheader("Improved Message Evaluation")
             improved_scores = extract_scores(improved_response)
-            improved_avg = sum(improved_scores.values()) / len(improved_scores)
-            st.metric("Improved Aggregate Score", f"{improved_avg:.1f}/10")
-            st.write(improved_response)
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.subheader("Comparison of Domain Scores")
-        comparison_df = pd.DataFrame({
-            "Domain": list(original_scores.keys()),
-            "Original Score": list(original_scores.values()),
-            "Improved Score": [improved_scores.get(d, 0) for d in original_scores.keys()]
-        })
+            comparison_df = pd.DataFrame({
+                "Domain": original_scores.keys(),
+                "Original Score": original_scores.values(),
+                "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
+            })
 
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            y=comparison_df["Domain"],
-            x=comparison_df["Original Score"],
-            name='Original Score',
-            orientation='h'
-        ))
-        fig.add_trace(go.Bar(
-            y=comparison_df["Domain"],
-            x=comparison_df["Improved Score"],
-            name='Improved Score',
-            orientation='h'
-        ))
-        fig.update_layout(barmode='group', height=600)
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.subheader("Comparison of Domain Scores")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Original Score"],
+                name='Original Score',
+                orientation='h'
+            ))
+            fig.add_trace(go.Bar(
+                y=comparison_df["Domain"],
+                x=comparison_df["Improved Score"],
+                name='Improved Score',
+                orientation='h'
+            ))
+            fig.update_layout(barmode='group', height=600)
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.error(f"Could not parse detailed scores for visualization: {str(e)}")
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        # Show Improved Message
         st.subheader("Final Improved Message")
         st.success(improved_message)
-        st.markdown("</div>", unsafe_allow_html=True)
