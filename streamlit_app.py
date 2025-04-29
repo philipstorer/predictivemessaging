@@ -25,7 +25,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Predictive Message Testing Dashboard")
+st.title("Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
 with st.form("message_form"):
@@ -102,7 +102,10 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
+- Output a clear Markdown table showing:
+    | Domain | Score (0-10) | Diagnostic Insight | Strategic Impact |
+    |--------|--------------|--------------------|------------------|
+    (One row per domain)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 - THEN suggest an improved version.
@@ -137,7 +140,10 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table
+- Output a clear Markdown table showing:
+    | Domain | Score (0-10) | Diagnostic Insight | Strategic Impact |
+    |--------|--------------|--------------------|------------------|
+    (One row per domain)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
