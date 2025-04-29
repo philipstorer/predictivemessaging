@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import json
 import re
 import time
-import threading
 
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -13,6 +12,16 @@ st.set_page_config(page_title="Predictive Message Testing Dashboard", layout="wi
 
 st.markdown("""
 <style>
+.big-font {
+    font-size:30px !important;
+}
+.card {
+    background-color: #f9f9f9;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
 .section-title {
     font-size:22px;
     font-weight:bold;
@@ -36,9 +45,6 @@ with st.form("message_form"):
     tone = st.selectbox("Desired Tone:", ["Empathetic", "Clinical", "Inspirational", "Direct"], index=0)
     submit_button = st.form_submit_button("Analyze Message")
 
-spinner_placeholder = st.empty()
-thinking_placeholder = st.empty()
-
 def call_gpt(prompt):
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -56,7 +62,8 @@ def extract_json_block(response_text, label):
             return json_obj
         else:
             return None
-    except Exception:
+    except Exception as e:
+        print(f"Error parsing {label}: {e}")
         return None
 
 def extract_improved_message(response_text):
@@ -65,16 +72,13 @@ def extract_improved_message(response_text):
         if match:
             return match.group(1).strip()
         else:
-            match = re.search(r'Improved_Message:\s*(.*)', response_text)
-            if match:
-                return match.group(1).strip()
-            else:
-                return None
-    except Exception:
+            return None
+    except Exception as e:
+        print(f"Error extracting improved message: {e}")
         return None
 
-def animate_thinking(stop_event):
-    messages = [
+if submit_button and original_message:
+    spinner_messages = [
         "Evaluating Relational Anchoring...",
         "Assessing Emotional Reality Validation...",
         "Reviewing Narrative Integration...",
@@ -85,20 +89,16 @@ def animate_thinking(stop_event):
         "Evaluating Empathic Leadership Positioning...",
         "Reviewing Affective Modality Matching..."
     ]
-    idx = 0
-    while not stop_event.is_set():
-        thinking_placeholder.info(messages[idx % len(messages)])
-        idx += 1
-        time.sleep(1.2)
 
-if submit_button and original_message:
-    stop_event = threading.Event()
-    thinking_thread = threading.Thread(target=animate_thinking, args=(stop_event,))
-    thinking_thread.start()
+    with st.spinner('Starting cognitive-linguistic analysis...'):
+        for message in spinner_messages:
+            with st.empty():
+                st.info(message)
+                time.sleep(1.2)
 
-    original_length = len(original_message)
+        original_length = len(original_message)
 
-    system_prompt_original = f"""
+        system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -106,30 +106,33 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table
+- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 - Suggested Improved Version
 
 Constraints for the Improved Version:
-- Maintain same fundamental ideas and meaning.
-- Stay within ±15% of the original character count ({original_length} characters).
-- Improve tone, readability, emotional resonance, and strategic impact.
+- It must maintain the same fundamental idea, purpose, and meaning as the original message.
+- It must stay within ±15% of the original character count ({original_length} characters).
+- It should improve tone, readability, emotional resonance, and strategic impact, without altering the core communication intent.
 
-Output:
-- Improved_Message: "(your improved message here)"
-- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Output formatting:
+- After the evaluation, output ONLY the improved message separately, clearly labeled like this:
+Improved_Message: "(Your improved message here)"
+
+- Then output the 9 domain scores clearly in JSON format like this:
+Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-    original_response = call_gpt(system_prompt_original)
+        original_response = call_gpt(system_prompt_original)
 
-    improved_message = extract_improved_message(original_response)
-    original_scores = extract_json_block(original_response, "Scores_JSON")
+        improved_message = extract_improved_message(original_response)
+        original_scores = extract_json_block(original_response, "Scores_JSON")
 
-    improved_response = ""
-    improved_scores = {}
+        improved_response = ""
+        improved_scores = {}
 
-    if improved_message:
-        system_prompt_improved = f"""
+        if improved_message:
+            system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
 
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
@@ -137,28 +140,23 @@ Persona: {persona}
 Tone: {tone}
 
 Perform:
-- 9 Domain Table
+- 9 Domain Table (Relational Anchoring, Emotional Reality Validation, Narrative Integration, Collaborative Agency Framing, Value-Embedded Motivation, Cognitive Effort Reduction, Temporal Emotional Framing, Empathic Leadership Positioning, Affective Modality Matching)
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
-Output:
-- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Output formatting:
+- After the evaluation, output the 9 domain scores clearly in JSON format like this:
+Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
-        improved_response = call_gpt(system_prompt_improved)
-        improved_scores = extract_json_block(improved_response, "Scores_JSON")
-
-    stop_event.set()
-    thinking_thread.join()
-    thinking_placeholder.empty()
+            improved_response = call_gpt(system_prompt_improved)
+            improved_scores = extract_json_block(improved_response, "Scores_JSON")
 
     st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
-    if original_response:
-        st.markdown(original_response.split("Scores_JSON:")[0])
+    st.markdown(original_response.split("Scores_JSON:")[0])
 
     if improved_message:
         st.markdown('<div class="section-title">Improved Message Evaluation</div>', unsafe_allow_html=True)
-        if improved_response:
-            st.markdown(improved_response.split("Scores_JSON:")[0])
+        st.markdown(improved_response.split("Scores_JSON:")[0])
 
         if original_scores and improved_scores:
             st.markdown('<div class="section-title">Comparison of Domain Scores</div>', unsafe_allow_html=True)
@@ -170,6 +168,7 @@ Output:
                     "Original Score": original_scores.values(),
                     "Improved Score": [improved_scores.get(domain, 0) for domain in original_scores.keys()]
                 })
+
                 fig = go.Figure()
                 fig.add_trace(go.Bar(
                     y=comparison_df["Domain"],
