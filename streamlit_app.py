@@ -33,6 +33,9 @@ st.markdown("""
 st.title("Predictive Message Testing Dashboard")
 st.caption("Advanced Cognitive-Linguistic Diagnostic and Optimization")
 
+spinner_placeholder = st.empty()
+thinking_placeholder = st.empty()
+
 with st.form("message_form"):
     st.header("Message Input")
     original_message = st.text_area("Enter Original Message:", height=200)
@@ -44,9 +47,6 @@ with st.form("message_form"):
     ])
     tone = st.selectbox("Desired Tone:", ["Empathetic", "Clinical", "Inspirational", "Direct"], index=0)
     submit_button = st.form_submit_button("Analyze Message")
-
-spinner_placeholder = st.empty()
-thinking_placeholder = st.empty()
 
 def call_gpt(prompt):
     response = client.chat.completions.create(
@@ -85,25 +85,26 @@ def extract_improved_message(response_text):
         return None
 
 if submit_button and original_message:
-    with spinner_placeholder.container():
-        st.spinner('Starting cognitive-linguistic analysis...')
+    spinner_placeholder = st.spinner('Starting cognitive-linguistic analysis...')
+    thinking_area = st.empty()
 
-    spinner_messages = [
-        "Evaluating Relational Anchoring...",
-        "Assessing Emotional Reality Validation...",
-        "Reviewing Narrative Integration...",
-        "Measuring Collaborative Agency Framing...",
-        "Checking Value-Embedded Motivation...",
-        "Analyzing Cognitive Effort Reduction...",
-        "Assessing Temporal Emotional Framing...",
-        "Evaluating Empathic Leadership Positioning...",
-        "Reviewing Affective Modality Matching..."
-    ]
+    with spinner_placeholder:
+        spinner_messages = [
+            "Evaluating Relational Anchoring...",
+            "Assessing Emotional Reality Validation...",
+            "Reviewing Narrative Integration...",
+            "Measuring Collaborative Agency Framing...",
+            "Checking Value-Embedded Motivation...",
+            "Analyzing Cognitive Effort Reduction...",
+            "Assessing Temporal Emotional Framing...",
+            "Evaluating Empathic Leadership Positioning...",
+            "Reviewing Affective Modality Matching..."
+        ]
 
-    for message in spinner_messages:
-        thinking_placeholder.info(message)
-        time.sleep(1.2)
-        thinking_placeholder.empty()
+        for message in spinner_messages:
+            thinking_area.info(message)
+            time.sleep(1.2)
+            thinking_area.empty()
 
     original_length = len(original_message)
 
@@ -159,9 +160,6 @@ Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Na
 """
         improved_response = call_gpt(system_prompt_improved)
         improved_scores = extract_json_block(improved_response, "Scores_JSON")
-
-    spinner_placeholder.empty()
-    thinking_placeholder.empty()
 
     st.markdown('<div class="section-title">Original Message Evaluation</div>', unsafe_allow_html=True)
     st.markdown(original_response.split("Scores_JSON:")[0])
