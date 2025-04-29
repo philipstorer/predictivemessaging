@@ -91,8 +91,11 @@ if submit_button and original_message:
                 st.info(message)
                 time.sleep(1.5)
 
+        original_length = len(original_message)
+
         system_prompt_original = f"""
 You are a senior communication strategist specializing in psycholinguistics.
+
 Evaluate the following ORIGINAL MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
 Tone: {tone}
@@ -103,11 +106,15 @@ Perform:
 - Strategic Executive Summary
 - Suggested Improved Version
 
-Also, output ONLY the improved message separately at the end clearly like this:
-Improved_Message: "(Your improved message here)"
+Constraints for the Improved Version:
+- Make only light, subtle improvements.
+- Maintain the original idea, purpose, and meaning as closely as possible.
+- Keep within ±15% of the original character count ({original_length} characters).
+- Focus on improving tone, clarity, slight emotional enhancement, and overall readability without major rewrites.
 
-Also, output the 9 domain scores clearly in JSON format at the end like this:
-Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Output clearly at the end:
+- Improved_Message: "(your improved message here)"
+- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
         original_response = call_gpt(system_prompt_original)
 
@@ -120,6 +127,7 @@ Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Na
         if improved_message:
             system_prompt_improved = f"""
 You are a senior communication strategist specializing in psycholinguistics.
+
 Evaluate the following IMPROVED MESSAGE according to the Cognitive-Linguistic Deep Analysis Model.
 Persona: {persona}
 Tone: {tone}
@@ -129,8 +137,8 @@ Perform:
 - Aggregate Cognitive Resonance Score
 - Strategic Executive Summary
 
-Also, output the 9 domain scores clearly in JSON format at the end like this:
-Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
+Output clearly at the end:
+- Scores_JSON: {{"Relational Anchoring": 8, "Emotional Reality Validation": 7, "Narrative Integration": 6, "Collaborative Agency Framing": 9, "Value-Embedded Motivation": 8, "Cognitive Effort Reduction": 9, "Temporal Emotional Framing": 7, "Empathic Leadership Positioning": 8, "Affective Modality Matching": 7}}
 """
             improved_response = call_gpt(system_prompt_improved)
             improved_scores = extract_json_block(improved_response, "Scores_JSON")
