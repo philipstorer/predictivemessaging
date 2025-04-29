@@ -72,7 +72,11 @@ def extract_improved_message(response_text):
         if match:
             return match.group(1).strip()
         else:
-            return None
+            match = re.search(r'Improved_Message:\s*(.*)', response_text)
+            if match:
+                return match.group(1).strip()
+            else:
+                return None
     except Exception as e:
         print(f"Error extracting improved message: {e}")
         return None
